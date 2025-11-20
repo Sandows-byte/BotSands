@@ -3,7 +3,7 @@ import discord
 from discord.ext import commands
 
 # ====== ВСТАВЬ СВОЙ РАДИО-ПОТОК ======
-RADIO_URL = "https://example.com/radio.mp3"
+RADIO_URL = "https://dfm.hostingradio.ru/dfm96.aacp?radiostatistica=IRP_VK"
 # =====================================
 
 CONFIG_FILE = "channels.json"
