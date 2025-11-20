@@ -5,13 +5,14 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 
+# ===== Проверка токена =====
 print("DISCORD_TOKEN:", repr(os.getenv("DISCORD_TOKEN")))
 
-# ======= Настройки радио =======
+# ===== Настройки радио =====
 RADIO_URL = os.getenv("RADIO_URL", "https://dfm.hostingradio.ru/dfm96.aacp?radiostatistica=IRP_VK")
 CONFIG_FILE = "channels.json"
 
-# ======= Keep-alive через Flask =======
+# ===== Keep-alive через Flask =====
 app = Flask('')
 
 @app.route('/')
@@ -28,15 +29,15 @@ def keep_alive():
 
 keep_alive()
 
-# ======= Интенты =======
+# ===== Интенты =====
 intents = discord.Intents.default()
 intents.guilds = True
 intents.voice_states = True
-intents.message_content = True  # обязательно для команд
+intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# ======= Работа с конфигом =======
+# ===== Работа с конфигом =====
 def load_config():
     try:
         with open(CONFIG_FILE, "r") as f:
@@ -48,11 +49,10 @@ def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
 
-# ======= Автоподключение при запуске =======
+# ===== Автоподключение при старте =====
 @bot.event
 async def on_ready():
     print(f"Бот запущен: {bot.user}")
-
     config = load_config()
     for guild in bot.guilds:
         gid = str(guild.id)
@@ -66,14 +66,17 @@ async def on_ready():
                     print(f"▶ Подключён к {channel.name} на сервере {guild.name}")
                 except Exception as e:
                     print(f"Ошибка подключения: {e}")
-            else:
-                print(f"⚠ Канал {channel_id} не найден на сервере {guild.name}")
 
-# ======= Команды =======
+# ===== Автоподключение на новом сервере =====
+@bot.event
+async def on_guild_join(guild):
+    print(f"Бот добавлен на новый сервер: {guild.name}")
+    # Ожидаем команду !setradio от админа нового сервера
+
+# ===== Команда: установить канал радио =====
 @bot.command(name="setradio")
 @commands.has_permissions(administrator=True)
 async def set_radio(ctx, channel: discord.VoiceChannel):
-    """Устанавливает голосовой канал по умолчанию для радио"""
     config = load_config()
     config[str(ctx.guild.id)] = channel.id
     save_config(config)
@@ -87,39 +90,6 @@ async def set_radio(ctx, channel: discord.VoiceChannel):
     except Exception as e:
         await ctx.send(f"Ошибка подключения: {e}")
 
-@bot.command(name="playradio")
-async def play_radio(ctx):
-    """Запуск радио вручную"""
-    if not ctx.guild.voice_client:
-        await ctx.send("Бот не в голосовом канале!")
-        return
-    vc = ctx.guild.voice_client
-    vc.stop()
-    vc.play(discord.FFmpegPCMAudio(RADIO_URL))
-    await ctx.send("▶ Радио запущено!")
-
-@bot.command(name="stopradio")
-async def stop_radio(ctx):
-    """Остановка радио и отключение от канала"""
-    if ctx.guild.voice_client:
-        await ctx.guild.voice_client.disconnect()
-        await ctx.send("⛔ Радио остановлено.")
-    else:
-        await ctx.send("Бот не подключён к голосовому каналу.")
-
-@bot.command(name="getdefaultvoice")
-async def get_default_voice(ctx):
-    """Показать канал по умолчанию для радио на этом сервере"""
-    config = load_config()
-    gid = str(ctx.guild.id)
-    if gid in config:
-        channel = bot.get_channel(config[gid])
-        if channel:
-            await ctx.send(f"🎧 Канал по умолчанию: **{channel.name}**")
-        else:
-            await ctx.send("Канал не найден.")
-    else:
-        await ctx.send("Канал по умолчанию ещё не установлен. Используй `!setradio`.")
-
-# ======= Запуск бота =======
+# ===== Запуск бота =====
 bot.run(os.getenv("DISCORD_TOKEN"))
+
