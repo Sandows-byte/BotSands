@@ -122,4 +122,4 @@ async def get_default_voice(ctx):
         await ctx.send("Канал по умолчанию ещё не установлен. Используй `!setradio`.")
 
 # ======= Запуск бота =======
-bot.run(os.getenv("MTQ0MTEwMjAzMTc1MzQ0NTQxOA.GdkaDO.sKIKYiFS615VMbzFS5LI7dqdsWZKueTAgsU2vU"))
+bot.run(os.getenv("DISCORD_TOKEN"))
