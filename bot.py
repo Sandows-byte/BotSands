@@ -74,4 +74,4 @@ async def set_radio(ctx, channel: discord.VoiceChannel):
 
 
 # ======= Запуск бота =======
-bot.run("ТОКЕН_СЮДА")
+bot.run("MTQ0MTEwMjAzMTc1MzQ0NTQxOA.GdkaDO.sKIKYiFS615VMbzFS5LI7dqdsWZKueTAgsU2vU")
