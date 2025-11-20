@@ -8,7 +8,7 @@ from threading import Thread
 print("DISCORD_TOKEN:", repr(os.getenv("DISCORD_TOKEN")))
 
 # ======= Настройки радио =======
-RADIO_URL = os.getenv("https://dfm.hostingradio.ru/dfm96.aacp?radiostatistica=IRP_VK")
+RADIO_URL = os.getenv("RADIO_URL", "https://dfm.hostingradio.ru/dfm96.aacp?radiostatistica=IRP_VK")
 CONFIG_FILE = "channels.json"
 
 # ======= Keep-alive через Flask =======
