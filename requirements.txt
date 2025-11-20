@@ -1,3 +1,4 @@
 discord.py
 ffmpeg-python
 Flask
+PyNaCl
