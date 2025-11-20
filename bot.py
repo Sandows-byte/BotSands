@@ -5,6 +5,8 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 
+print("DISCORD_TOKEN:", repr(os.getenv("DISCORD_TOKEN")))
+
 # ======= Настройки радио =======
 RADIO_URL = os.getenv("https://dfm.hostingradio.ru/dfm96.aacp?radiostatistica=IRP_VK")
 CONFIG_FILE = "channels.json"
