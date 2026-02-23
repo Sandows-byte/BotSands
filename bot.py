@@ -5,29 +5,13 @@ from discord.ext import commands
 from flask import Flask
 from threading import Thread
 
-# ===== Проверка токена =====
-print("DISCORD_TOKEN:", repr(os.getenv("DISCORD_TOKEN")))
-
-# ===== Настройки радио =====
-RADIO_URL = os.getenv("RADIO_URL", "https://dfm.hostingradio.ru/dfm96.aacp?radiostatistica=IRP_VK")
+# ===== Настройки =====
+DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
+RADIO_URL = os.getenv(
+    "RADIO_URL",
+    "https://dfm.hostingradio.ru/dfm96.aacp?radiostatistica=IRP_VK"
+)
 CONFIG_FILE = "channels.json"
-
-# ===== Keep-alive через Flask =====
-app = Flask('')
-
-@app.route('/')
-def home():
-    return "Бот живой!"
-
-def run():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
-
-def keep_alive():
-    t = Thread(target=run)
-    t.start()
-
-keep_alive()
 
 # ===== Интенты =====
 intents = discord.Intents.default()
@@ -37,59 +21,103 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+# ===== Flask (для хостинга) =====
+app = Flask("")
+
+@app.route("/")
+def home():
+    return "Bot is running"
+
+def run():
+    app.run(host="0.0.0.0", port=3000)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
 # ===== Работа с конфигом =====
 def load_config():
     try:
         with open(CONFIG_FILE, "r") as f:
             return json.load(f)
-    except FileNotFoundError:
+    except:
         return {}
 
 def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
 
-# ===== Автоподключение при старте =====
+# ===== Функция запуска радио =====
+def play_radio(vc):
+    if vc.is_playing():
+        vc.stop()
+
+    source = discord.FFmpegPCMAudio(
+        RADIO_URL,
+        executable="ffmpeg",
+        before_options="-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+        options="-vn"
+    )
+    vc.play(source)
+
+# ===== При запуске =====
 @bot.event
 async def on_ready():
-    print(f"Бот запущен: {bot.user}")
+    print(f"Бот запущен как {bot.user}")
     config = load_config()
+
     for guild in bot.guilds:
         gid = str(guild.id)
         if gid in config:
-            channel_id = config[gid]
-            channel = bot.get_channel(channel_id)
+            channel = bot.get_channel(config[gid])
             if channel:
                 try:
+                    if guild.voice_client:
+                        await guild.voice_client.disconnect(force=True)
+
                     vc = await channel.connect()
-                    vc.play(discord.FFmpegPCMAudio(RADIO_URL))
-                    print(f"▶ Подключён к {channel.name} на сервере {guild.name}")
+                    play_radio(vc)
+                    print(f"▶ Подключён к {channel.name} ({guild.name})")
+
                 except Exception as e:
                     print(f"Ошибка подключения: {e}")
 
-# ===== Автоподключение на новом сервере =====
+# ===== Если выбросило из канала =====
 @bot.event
-async def on_guild_join(guild):
-    print(f"Бот добавлен на новый сервер: {guild.name}")
-    # Ожидаем команду !setradio от админа нового сервера
+async def on_voice_state_update(member, before, after):
+    if member == bot.user and after.channel is None:
+        print("Бота выбросило из канала")
 
-# ===== Команда: установить канал радио =====
+# ===== Установка канала =====
 @bot.command(name="setradio")
 @commands.has_permissions(administrator=True)
 async def set_radio(ctx, channel: discord.VoiceChannel):
     config = load_config()
     config[str(ctx.guild.id)] = channel.id
     save_config(config)
-    await ctx.send(f"🎧 Теперь радио будет играть в: **{channel.name}**")
+
+    await ctx.send(f"🎧 Радио будет играть в: **{channel.name}**")
 
     try:
         if ctx.guild.voice_client:
             await ctx.guild.voice_client.disconnect(force=True)
+
         vc = await channel.connect()
-        vc.play(discord.FFmpegPCMAudio(RADIO_URL))
+        play_radio(vc)
+
     except Exception as e:
         await ctx.send(f"Ошибка подключения: {e}")
 
-# ===== Запуск бота =====
-bot.run(os.getenv("DISCORD_TOKEN"))
+# ===== Команда остановки =====
+@bot.command(name="stopradio")
+@commands.has_permissions(administrator=True)
+async def stop_radio(ctx):
+    if ctx.guild.voice_client:
+        await ctx.guild.voice_client.disconnect(force=True)
+        await ctx.send("⛔ Радио остановлено")
+    else:
+        await ctx.send("Бот не подключён")
 
+# ===== Запуск =====
+keep_alive()
+bot.run(DISCORD_TOKEN)
