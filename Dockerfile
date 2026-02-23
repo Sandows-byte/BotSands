@@ -1,16 +1,10 @@
-FROM python:3.11-slim
+FROM jrottenberg/ffmpeg:6.0-ubuntu
 
-# Установка ffmpeg
-RUN apt-get update && \
-    apt-get install -y ffmpeg && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y python3 python3-pip
 
 WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
 
-CMD ["python", "bot.py"]
+RUN pip3 install -r requirements.txt
+
+CMD ["python3", "bot.py"]
